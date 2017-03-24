@@ -64,7 +64,8 @@ BsmtFinType1、BsmtCond 、BsmtQual 、MasVnrArea、MasVnrType 、Electrical的�
 
 '''
 好啦，花了这么多功夫将category 编码，现在可以愉快的进行描述性分析啦~
-elastic net回归得到features的重要性排名
+例如剔除异常值
+以及用elastic net回归得到features的重要性排名等
 '''
 ###
 #2.develop targets for training
@@ -72,6 +73,9 @@ elastic net回归得到features的重要性排名
 '''
 kaggle要求的是Root Mean Squared Logarithmic Error ---
 RMSLE penalizes an under-predicted estimate greater than an over-predicted estimate
+但是sklearn gradient boosting里面没有这一loss，所以有时间的话我要自己写一个
+gradient boosting 用RMSLE来计算loss，当然也应该想sklearn的gradient boosting
+一样保健random forest
 '''
 #3.train a  model
 '''
@@ -91,11 +95,10 @@ xTest = xTest[housePriceNames]
 #'''
 nrowXTrain,ncolXTrain = xTrain.shape
 #instantiate model
-nEst = 9000
+nEst = 10000
 depth = 7
-learnRate = 0.01 #试了几组，貌似这个值对test比较友好
-#maxFeatures =  int(ncolXTrain/3) #原始作者推荐random forest 回归用features的三分之一 分类用平方根
-maxFeatures = int(ncolXTrain/3)
+learnRate = 0.013
+maxFeatures =  int(ncolXTrain/3) #原始作者推荐random forest 回归用features的三分之一 分类用平方根
 subsamp = 0.5
 housePriceGBMModel = ensemble.GradientBoostingRegressor(n_estimators=nEst,max_depth=depth, 
             learning_rate=learnRate,max_features=maxFeatures,subsample=subsamp, loss='ls')
@@ -112,7 +115,7 @@ yPrediction = housePriceGBMModel.predict(xTest)
 
 for p in predictions:
     msError.append(mean_squared_error(yTest, p))
-    root_mean_square_logarithmic = np.sqrt(np.mean((np.log(p + 1) - np.log(yTest + 1)) ** 2))
+    root_mean_square_logarithmic = (10**9)*np.sqrt(np.mean((np.log(p + 1) - np.log(yTest + 1)) ** 2))
     RMSLError.append(root_mean_square_logarithmic)
 #print("MSE" )
 #print(min(msError))
@@ -124,8 +127,8 @@ print(RMSLError.index(max(RMSLError)))
 
 #plot training and test errors vs number of trees in ensemble
 plot.figure()
-#plot.plot(range(1, nEst + 1), housePriceGBMModel.train_score_,
-#label='Training Set MSE', linestyle=":")
+plot.plot(range(1, nEst + 1), housePriceGBMModel.train_score_,
+label='Training Set MSE', linestyle=":")
 plot.plot(range(1, nEst + 1), RMSLError, label='Test Set RMSL')
 #plot.plot(range(1, nEst + 1), msError, label='Test Set MSE')
 plot.legend(loc='upper right')
